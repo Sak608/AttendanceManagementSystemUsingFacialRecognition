@@ -9,7 +9,14 @@ from PIL import ImageTk, Image
 
 # Train Image
 def TrainImage(haarcasecade_path, trainimage_path, trainimagelabel_path, message,text_to_speech):
+    # if os.path.exists(trainimagelabel_path):
+    #     res = "Training skipped: model already exists."
+    #     message.configure(text=res)
+    #     text_to_speech(res)
+    #     return
+    
     recognizer = cv2.face.LBPHFaceRecognizer_create()
+
     detector = cv2.CascadeClassifier(haarcasecade_path)
     faces, Id = getImagesAndLables(trainimage_path)
     recognizer.train(faces, np.array(Id))

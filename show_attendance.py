@@ -5,40 +5,57 @@ import tkinter
 import csv
 import tkinter as tk
 from tkinter import *
+from tkinter import ttk
 
 def subjectchoose(text_to_speech):
-    def calculate_attendance():
-        Subject = tx.get()
-        if Subject=="":
-            t='Please enter the subject name.'
-            text_to_speech(t)
-    
-        filenames = glob(
-            f"Attendance\\{Subject}\\{Subject}*.csv"
-        )
-        df = [pd.read_csv(f) for f in filenames]
-        newdf = df[0]
-        for i in range(1, len(df)):
-            newdf = newdf.merge(df[i], how="outer")
-        newdf.fillna(0, inplace=True)
-        newdf["Attendance"] = 0
-        for i in range(len(newdf)):
-            newdf["Attendance"].iloc[i] = str(int(round(newdf.iloc[i, 2:-1].mean() * 100)))+'%'
-            #newdf.sort_values(by=['Enrollment'],inplace=True)
-        newdf.to_csv(f"Attendance\\{Subject}\\attendance.csv", index=False)
+    def load_dates():
+        Subject = tx.get().strip()
+        if Subject == "":
+            text_to_speech("Please enter the subject name.")
+            return
+
+        path = f"Attendance\\{Subject}\\{Subject}*.csv"
+        files = glob(path)
+
+        if not files:
+            text_to_speech(f"No attendance records found for {Subject}.")
+            return
+
+        dates.clear()
+        for f in files:
+            basename = os.path.basename(f)
+            parts = basename.split("_")
+            if len(parts) >= 2:
+                date_part = parts[1]
+                dates.append((date_part, f))  # (display date, full path)
+
+        date_combobox['values'] = [d[0] for d in dates]
+        if dates:
+            date_combobox.current(0)
+
+    def show_attendance():
+        if not dates:
+            text_to_speech("No date selected or no attendance records found.")
+            return
+
+        idx = date_combobox.current()
+        if idx == -1:
+            text_to_speech("Please select a date.")
+            return
+
+        csv_file = dates[idx][1]
+        if not os.path.exists(csv_file):
+            text_to_speech("Selected attendance file does not exist.")
+            return
 
         root = tkinter.Tk()
-        root.title("Attendance of "+Subject)
+        root.title("Attendance")
         root.configure(background="black")
-        cs = f"Attendance\\{Subject}\\attendance.csv"
-        with open(cs) as file:
+
+        with open(csv_file) as file:
             reader = csv.reader(file)
-            r = 0
-
-            for col in reader:
-                c = 0
-                for row in col:
-
+            for r, col in enumerate(reader):
+                for c, row in enumerate(col):
                     label = tkinter.Label(
                         root,
                         width=10,
@@ -50,93 +67,37 @@ def subjectchoose(text_to_speech):
                         relief=tkinter.RIDGE,
                     )
                     label.grid(row=r, column=c)
-                    c += 1
-                r += 1
         root.mainloop()
-        print(newdf)
 
+    # GUI setup
     subject = Tk()
-    # windo.iconbitmap("AMS.ico")
-    subject.title("Subject...")
-    subject.geometry("580x320")
-    subject.resizable(0, 0)
+    subject.title("Select Subject & Date")
+    subject.geometry("600x400")
     subject.configure(background="black")
-    # subject_logo = Image.open("UI_Image/0004.png")
-    # subject_logo = subject_logo.resize((50, 47), Image.ANTIALIAS)
-    # subject_logo1 = ImageTk.PhotoImage(subject_logo)
-    titl = tk.Label(subject, bg="black", relief=RIDGE, bd=10, font=("arial", 30))
-    titl.pack(fill=X)
-    # l1 = tk.Label(subject, image=subject_logo1, bg="black",)
-    # l1.place(x=100, y=10)
-    titl = tk.Label(
-        subject,
-        text="Which Subject of Attendance?",
-        bg="black",
-        fg="green",
-        font=("arial", 25),
-    )
-    titl.place(x=100, y=12)
 
-    def Attf():
-        sub = tx.get()
-        if sub == "":
-            t="Please enter the subject name!!!"
-            text_to_speech(t)
-        else:
-            os.startfile(
-            f"Attendance\\{sub}"
-            )
+    tk.Label(subject, text="Subject Attendance Viewer", bg="black", fg="green", font=("arial", 25)).pack(pady=10)
 
+    # Subject Entry
+    tk.Label(subject, text="Enter Subject", bg="black", fg="yellow", font=("times new roman", 15)).place(x=50, y=80)
+    tx = tk.Entry(subject, width=15, bd=5, bg="black", fg="yellow", font=("times", 20, "bold"))
+    tx.place(x=220, y=80)
 
-    attf = tk.Button(
-        subject,
-        text="Check Sheets",
-        command=Attf,
-        bd=7,
-        font=("times new roman", 15),
-        bg="black",
-        fg="yellow",
-        height=2,
-        width=10,
-        relief=RIDGE,
-    )
-    attf.place(x=360, y=170)
+    # Load Dates Button
+    load_btn = tk.Button(subject, text="Load Dates", command=load_dates, bd=7, font=("times new roman", 15),
+                         bg="black", fg="yellow", width=12)
+    load_btn.place(x=420, y=75)
 
-    sub = tk.Label(
-        subject,
-        text="Enter Subject",
-        width=10,
-        height=2,
-        bg="black",
-        fg="yellow",
-        bd=5,
-        relief=RIDGE,
-        font=("times new roman", 15),
-    )
-    sub.place(x=50, y=100)
+    # Date Selector
+    tk.Label(subject, text="Select Date", bg="black", fg="yellow", font=("times new roman", 15)).place(x=50, y=150)
+    date_combobox = ttk.Combobox(subject, state="readonly", font=("times", 15))
+    date_combobox.place(x=220, y=150)
 
-    tx = tk.Entry(
-        subject,
-        width=15,
-        bd=5,
-        bg="black",
-        fg="yellow",
-        relief=RIDGE,
-        font=("times", 30, "bold"),
-    )
-    tx.place(x=190, y=100)
+    # View Attendance Button
+    view_btn = tk.Button(subject, text="View Attendance", command=show_attendance, bd=7, font=("times new roman", 15),
+                         bg="black", fg="yellow", width=15)
+    view_btn.place(x=220, y=220)
 
-    fill_a = tk.Button(
-        subject,
-        text="View Attendance",
-        command=calculate_attendance,
-        bd=7,
-        font=("times new roman", 15),
-        bg="black",
-        fg="yellow",
-        height=2,
-        width=12,
-        relief=RIDGE,
-    )
-    fill_a.place(x=195, y=170)
+    # List to store dates and file paths
+    dates = []
+
     subject.mainloop()
